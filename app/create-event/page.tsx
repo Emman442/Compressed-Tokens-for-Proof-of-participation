@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,6 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge, CalendarIcon, Users } from "lucide-react";
 import { toast } from "sonner";
 import { MINT_SIZE, TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { encodeURL, createQR } from "@solana/pay";
+
 import {
   Rpc,
   buildAndSignTx,
@@ -21,6 +23,7 @@ import {
 } from "@lightprotocol/compressed-token";
 import { ComputeBudgetProgram, Keypair, Transaction } from "@solana/web3.js";
 import { useWallet } from "@solana/wallet-adapter-react";
+import { useCreateGame } from "@/features/event";
 
 const CreateEventPage = () => {
   const [name, setName] = useState("");
@@ -30,6 +33,12 @@ const CreateEventPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(false);
   const { publicKey, signTransaction, wallet } = useWallet();
+  const {create, isCreating} = useCreateGame()
+  const [qrCodeUrl, setQrCodeUrl] = useState("");
+    const qrRef = useRef<HTMLDivElement>(null);
+  
+  // Create a hidden QR ref for generating the QR code
+  const hiddenQrRef = useRef  <HTMLDivElement>(null);
 
   const RPC_ENDPOINT = `${process.env.NEXT_PUBLIC_HELIUS_DEVNET_URL}`;
   const COMPRESSION_ENDPOINT = RPC_ENDPOINT;
@@ -43,7 +52,66 @@ const CreateEventPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
+    setIsSubmitting(true);  
+    
+    const generateQrCodeUrl = () => {
+    // Backend API endpoint for transaction requests
+    // Replace with your actual backend URL
+    const apiUrl = new URL("https://883e-102-215-57-182.ngrok-free.app/api/claim-token");
+    
+    // Encode the Solana Pay transaction request URL
+    const solanaPayUrl = encodeURL({
+      link: apiUrl,
+      label: "Claim cToken",
+      message: `Proof of Participation for ${name}`,
+    });
+
+    return solanaPayUrl.toString();
+  };
+
+  // Generate QR code SVG and convert to data URL
+//   const generateQrCodeDataUrl = async (url: string): Promise<string> => {
+//     return new Promise((resolve) => {
+//       if (hiddenQrRef.current) {
+//         hiddenQrRef.current.innerHTML = ""; // Clear previous QR code
+//         const qr = createQR(url, 256, "white", "black");
+//         qr.append(hiddenQrRef.current);
+        
+//         // Convert QR code SVG to data URL
+//         setTimeout(() => {
+//           const svg = hiddenQrRef.current?.querySelector("svg");
+//           if (!svg) {
+//             resolve("");
+//             return;
+//           }
+          
+//           const svgData = new XMLSerializer().serializeToString(svg);
+//           const svgBlob = new Blob([svgData], {
+//             type: "image/svg+xml;charset=utf-8",
+//           });
+//           const url = URL.createObjectURL(svgBlob);
+          
+//           const canvas = document.createElement("canvas");
+//           const ctx = canvas.getContext("2d");
+//           const img = new Image();
+          
+//           img.onload = () => {
+//             canvas.width = img.width;
+//             canvas.height = img.height;
+//             ctx?.drawImage(img, 0, 0);
+//             const dataUrl = canvas.toDataURL("image/png");
+//             URL.revokeObjectURL(url);
+//             resolve(dataUrl);
+//           };
+          
+//           img.src = url;
+//         }, 100);
+//       } else {
+//         resolve("");
+//       }
+//     });
+//   };
+
 
     try {
       if (!publicKey || !signTransaction) {
@@ -123,8 +191,22 @@ const CreateEventPage = () => {
       );
       await connection.confirmTransaction(mintToTxId, "confirmed");
 
-      console.log("✅ Tokens minted! tx:", mintToTxId);
       toast.success(`Minted ${tokenCount} tokens!`);
+      const qrUrl = generateQrCodeUrl();
+      setQrCodeUrl(qrUrl);
+
+      const data={
+        name,
+        description,
+        date,
+        minted_tokens: tokenCount,
+        createdBy: publicKey.toBase58(),
+        mint: mintKeypair.publicKey.toBase58(),
+        qr_url: qrUrl
+      }
+      console.log(data)
+
+      create(data)
     } catch (err) {
       console.error(err);
       toast.error("Failed to create mint or mint tokens.");

@@ -4,6 +4,7 @@ import "./globals.css";
 import Header from "@/components/Header";
 import AppWalletProvider from "@/components/AppWalletProvider";
 import { Toaster } from "sonner";
+import Providers from "@/provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -38,9 +39,9 @@ export default function RootLayout({
     <html lang="en">
       <body className={` ${poppins.variable} antialiased`}>
         <AppWalletProvider>
-          <Toaster />
           <Header />
-          {children}
+          <Providers>{children}</Providers>
+          <Toaster />
         </AppWalletProvider>
       </body>
     </html>

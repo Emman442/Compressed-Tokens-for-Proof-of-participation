@@ -182,3 +182,9 @@
     -webkit-text-fill-color: transparent;
   }
 }
+
+
+#qr-code svg {
+  border-radius: 12px; /* Optional: rounded corners */
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); /* Optional: subtle shadow */
+}

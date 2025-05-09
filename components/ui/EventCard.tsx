@@ -2,12 +2,13 @@ import React from "react";
 import { Calendar, User, Badge } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+
 export interface EventProps {
   id: string;
   name: string;
   date: string;
-  totalMinted?: number;
-  totalClaimed?: number;
+  minted_tokens?: number;
+  claimed_tokens?: number;
   image?: string;
   className?: string;
   isProof?: boolean;
@@ -18,13 +19,14 @@ const EventCard = ({
   id,
   name,
   date,
-  totalMinted,
-  totalClaimed,
+  minted_tokens,
+  claimed_tokens,
   image,
   className,
   isProof = false,
   onClick,
 }: EventProps) => {
+    const options: Intl.DateTimeFormatOptions = { year: "numeric", month: "long", day: "numeric" };
   return (
     <div
       className={cn(
@@ -48,27 +50,27 @@ const EventCard = ({
         <h3 className="font-bold text-lg mb-1 truncate">{name}</h3>
         <div className="flex items-center text-sm text-(--muted-foreground) mb-3">
           <Calendar size={14} className="mr-1" />
-          <span>{date}</span>
+          <span>{new Date(date).toLocaleDateString('en-US', options)}</span>
         </div>
 
         {!isProof &&
-          totalMinted !== undefined &&
-          totalClaimed !== undefined && (
+          minted_tokens !== undefined &&
+          claimed_tokens !== undefined && (
             <div className="mt-2 space-y-1">
               <div className="flex justify-between text-sm">
                 <span className="text-(--muted-foreground)">Minted:</span>
-                <span className="font-medium">{totalMinted}</span>
+                <span className="font-medium">{minted_tokens}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-(--muted-foreground)">Claimed:</span>
-                <span className="font-medium">{totalClaimed}</span>
+                <span className="font-medium">{claimed_tokens}</span>
               </div>
               <div className="h-2 bg-[#1B294B] mt-2 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-gradient-to-r from-(--solana-purple) to-(--solana-purple-dark)"
                   style={{
                     width: `${
-                      totalMinted > 0 ? (totalClaimed / totalMinted) * 100 : 0
+                      minted_tokens > 0 ? (claimed_tokens / minted_tokens) * 100 : 0
                     }%`,
                   }}
                 />
