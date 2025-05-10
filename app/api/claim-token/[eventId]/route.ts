@@ -17,11 +17,10 @@ import { sendError } from 'next/dist/server/api-utils';
 
 const TOKEN_DECIMALS = 9; // Adjust based on your token (e.g., USDC is 6)
 
-export async function POST(request: NextRequest, { params }: { params: { eventId: string } }) {
-    console.log('Event ID:', params.eventId);
+export async function POST(request: NextRequest, context: any) {
+    const { params } = await context;
     const eventRes = await axios.get(`${process.env.BACKEND_BASE_URL}/event/details/${params.eventId}`);
     const eventData = eventRes.data;
-    console.log('Fetched event data:', eventData);
 
     try {
         const body = await request.json();
@@ -57,7 +56,8 @@ export async function POST(request: NextRequest, { params }: { params: { eventId
         );
 
         console.log('Transfer transaction ID:', transferTxId);
-        const mint = new PublicKey(eventData.mint);
+        // Uncomment the following lines if you want to handle decompression as well
+        // const mint = new PublicKey(eventData.mint);
 
         // const ata = await getOrCreateAssociatedTokenAccount(
         //     connection,
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest, { params }: { params: { eventId
         //     userPublicKey
         // );
 
-        // // Fetch compressed token accounts owned by the user
+        // Fetch compressed token accounts owned by the user
         // const compressedTokenAccounts = await connection.getCompressedTokenAccountsByOwner(userPublicKey, { mint });
 
         // if (compressedTokenAccounts.items.length === 0) {
