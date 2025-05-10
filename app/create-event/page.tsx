@@ -1,5 +1,5 @@
 "use client";
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,7 +26,6 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { useCreateGame, useUpdateEvent } from "@/features/event";
 
 const CreateEventPage = () => {
-  const [eventId, setEventId] = useState("");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState("");
@@ -35,13 +34,7 @@ const CreateEventPage = () => {
   const { publicKey, signTransaction, wallet } = useWallet();
   const { create, isCreating } = useCreateGame();
   const { update, isPending } = useUpdateEvent();
-  const qrRef = useRef<HTMLDivElement>(null);
   const eventVault = Keypair.generate();
-  const baseUrl = window.location.origin;
-
-  // Create a hidden QR ref for generating the QR code
-  const hiddenQrRef = useRef<HTMLDivElement>(null);
-
   const RPC_ENDPOINT = `${process.env.NEXT_PUBLIC_HELIUS_DEVNET_URL}`;
   const COMPRESSION_ENDPOINT = RPC_ENDPOINT;
   const PROVER_ENDPOINT = RPC_ENDPOINT;
@@ -51,6 +44,12 @@ const CreateEventPage = () => {
     COMPRESSION_ENDPOINT,
     PROVER_ENDPOINT
   );
+
+    const [baseUrl, setBaseUrl] = useState("");
+
+    useEffect(() => {
+      setBaseUrl(window.location.origin);
+    }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
