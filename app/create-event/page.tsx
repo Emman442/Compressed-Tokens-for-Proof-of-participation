@@ -37,6 +37,7 @@ const CreateEventPage = () => {
   const { update, isPending } = useUpdateEvent();
   const qrRef = useRef<HTMLDivElement>(null);
   const eventVault = Keypair.generate();
+  const baseUrl = window.location.origin;
 
   // Create a hidden QR ref for generating the QR code
   const hiddenQrRef = useRef<HTMLDivElement>(null);
@@ -195,7 +196,7 @@ const CreateEventPage = () => {
         onSuccess(data) {
           const generateQrCodeUrl = () => {
             const apiUrl = new URL(
-              `https://10df-102-215-57-161.ngrok-free.app/api/claim-token/${data?.data?._id}`
+              `${baseUrl}/api/claim-token/${data?.data?._id}`
             );
 
             // Encode the Solana Pay transaction request URL
