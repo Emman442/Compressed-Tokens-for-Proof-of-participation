@@ -8,8 +8,6 @@ import { FileText, Loader, PlusCircle } from "lucide-react";
 import { useGetEvent } from "@/features/event";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-import moment from "moment"
-
 
 
 export interface Event {

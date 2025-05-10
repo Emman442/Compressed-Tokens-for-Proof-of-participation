@@ -28,3 +28,14 @@ export const getEventById = async (id: string) => {
     });
     return data;
 };
+
+export const updateEvent= async (id: string, updateData: any ) => {
+    const data = await axios.put(`${process.env.NEXT_PUBLIC_BACKEND_BASE_URL}/event/update/${id}`, updateData, {
+        headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        },
+    });
+    return data;
+};
+

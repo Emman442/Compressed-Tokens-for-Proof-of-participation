@@ -11,34 +11,35 @@ import { encodeURL, createQR } from "@solana/pay";
 
 import {
   Rpc,
-  buildAndSignTx,
+  bn,
   createRpc,
-  dedupeSigner,
   selectStateTreeInfo,
 } from "@lightprotocol/stateless.js";
 import {
   CompressedTokenProgram,
   getTokenPoolInfos,
+  selectMinCompressedTokenAccountsForTransfer,
   selectTokenPoolInfo,
 } from "@lightprotocol/compressed-token";
 import { ComputeBudgetProgram, Keypair, Transaction } from "@solana/web3.js";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { useCreateGame } from "@/features/event";
+import { useCreateGame, useUpdateEvent } from "@/features/event";
 
 const CreateEventPage = () => {
+  const [eventId, setEventId] = useState("");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState("");
   const [tokenCount, setTokenCount] = useState(100);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [loading, setLoading] = useState(false);
   const { publicKey, signTransaction, wallet } = useWallet();
-  const {create, isCreating} = useCreateGame()
-  const [qrCodeUrl, setQrCodeUrl] = useState("");
-    const qrRef = useRef<HTMLDivElement>(null);
-  
+  const { create, isCreating } = useCreateGame();
+  const { update, isPending } = useUpdateEvent();
+  const qrRef = useRef<HTMLDivElement>(null);
+  const eventVault = Keypair.generate();
+
   // Create a hidden QR ref for generating the QR code
-  const hiddenQrRef = useRef  <HTMLDivElement>(null);
+  const hiddenQrRef = useRef<HTMLDivElement>(null);
 
   const RPC_ENDPOINT = `${process.env.NEXT_PUBLIC_HELIUS_DEVNET_URL}`;
   const COMPRESSION_ENDPOINT = RPC_ENDPOINT;
@@ -52,71 +53,12 @@ const CreateEventPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);  
-    
-    const generateQrCodeUrl = () => {
-    // Backend API endpoint for transaction requests
-    // Replace with your actual backend URL
-    const apiUrl = new URL("https://883e-102-215-57-182.ngrok-free.app/api/claim-token");
-    
-    // Encode the Solana Pay transaction request URL
-    const solanaPayUrl = encodeURL({
-      link: apiUrl,
-      label: "Claim cToken",
-      message: `Proof of Participation for ${name}`,
-    });
-
-    return solanaPayUrl.toString();
-  };
-
-  // Generate QR code SVG and convert to data URL
-//   const generateQrCodeDataUrl = async (url: string): Promise<string> => {
-//     return new Promise((resolve) => {
-//       if (hiddenQrRef.current) {
-//         hiddenQrRef.current.innerHTML = ""; // Clear previous QR code
-//         const qr = createQR(url, 256, "white", "black");
-//         qr.append(hiddenQrRef.current);
-        
-//         // Convert QR code SVG to data URL
-//         setTimeout(() => {
-//           const svg = hiddenQrRef.current?.querySelector("svg");
-//           if (!svg) {
-//             resolve("");
-//             return;
-//           }
-          
-//           const svgData = new XMLSerializer().serializeToString(svg);
-//           const svgBlob = new Blob([svgData], {
-//             type: "image/svg+xml;charset=utf-8",
-//           });
-//           const url = URL.createObjectURL(svgBlob);
-          
-//           const canvas = document.createElement("canvas");
-//           const ctx = canvas.getContext("2d");
-//           const img = new Image();
-          
-//           img.onload = () => {
-//             canvas.width = img.width;
-//             canvas.height = img.height;
-//             ctx?.drawImage(img, 0, 0);
-//             const dataUrl = canvas.toDataURL("image/png");
-//             URL.revokeObjectURL(url);
-//             resolve(dataUrl);
-//           };
-          
-//           img.src = url;
-//         }, 100);
-//       } else {
-//         resolve("");
-//       }
-//     });
-//   };
-
+    setIsSubmitting(true);
 
     try {
       if (!publicKey || !signTransaction) {
         toast.error("Wallet not connected");
-        throw new Error("Wallet not connected");        
+        throw new Error("Wallet not connected");
       }
 
       const mintKeypair = Keypair.generate();
@@ -149,12 +91,9 @@ const CreateEventPage = () => {
         skipPreflight: false,
       });
       await connection.confirmTransaction(txId, "confirmed");
-
-      console.log("✅ Mint created:", mintKeypair.publicKey.toBase58());
       toast.success(`Mint created: ${mintKeypair.publicKey.toBase58()}`);
 
       // 2️⃣ Initialize RPC for LightProtocol
-
       const outputStateTreeInfo = selectStateTreeInfo(
         await connection.getStateTreeInfos()
       );
@@ -168,7 +107,7 @@ const CreateEventPage = () => {
         mint: mintKeypair.publicKey,
         authority: publicKey,
         toPubkey: publicKey,
-        amount: tokenCount * 1e9, // if 9 decimals
+        amount: tokenCount * 1e9,
         outputStateTreeInfo,
         tokenPoolInfo,
       });
@@ -192,23 +131,93 @@ const CreateEventPage = () => {
       await connection.confirmTransaction(mintToTxId, "confirmed");
 
       toast.success(`Minted ${tokenCount} tokens!`);
-      const qrUrl = generateQrCodeUrl();
-      setQrCodeUrl(qrUrl);
 
-      const data={
+      //Transfer to event vault
+
+      let amount = bn(tokenCount * 1e9);
+      const compressedTokenAccounts =
+        await connection.getCompressedTokenAccountsByOwner(publicKey, {
+          mint: mintKeypair.publicKey,
+        });
+
+      const [inputAccounts] = selectMinCompressedTokenAccountsForTransfer(
+        compressedTokenAccounts.items,
+        amount
+      );
+
+      const proof = await connection.getValidityProofV0(
+        inputAccounts.map((account) => ({
+          hash: account.compressedAccount.hash,
+          tree: account.compressedAccount.treeInfo.tree,
+          queue: account.compressedAccount.treeInfo.queue,
+        }))
+      );
+
+      const ix = await CompressedTokenProgram.transfer({
+        payer: publicKey,
+        inputCompressedTokenAccounts: inputAccounts,
+        toAddress: eventVault.publicKey,
+        amount,
+        recentInputStateRootIndices: proof.rootIndices,
+        recentValidityProof: proof.compressedProof,
+      });
+      const transferTx = new Transaction({
+        feePayer: publicKey,
+        recentBlockhash: blockhash,
+      });
+
+      transferTx.add(
+        ComputeBudgetProgram.setComputeUnitLimit({ units: 500_000 }),
+        ix
+      );
+      const signedTransferTx = await signTransaction(transferTx);
+      const transferTxId = await connection.sendRawTransaction(
+        signedTransferTx.serialize(),
+        { skipPreflight: false }
+      );
+      await connection.confirmTransaction(transferTxId, "confirmed");
+
+      toast.success("Transferred tokens to event vault!");
+
+      const data = {
         name,
         description,
         date,
         minted_tokens: tokenCount,
         createdBy: publicKey.toBase58(),
         mint: mintKeypair.publicKey.toBase58(),
-        qr_url: qrUrl
-      }
-      console.log(data)
+        keypair: {
+          publicKey: eventVault.publicKey.toBase58(),
+          secretKey: Buffer.from(eventVault.secretKey).toString("base64"),
+        },
+      };
+      create(data, {
+        onSuccess(data) {
+          const generateQrCodeUrl = () => {
+            const apiUrl = new URL(
+              `https://10df-102-215-57-161.ngrok-free.app/api/claim-token/${data?.data?._id}`
+            );
 
-      create(data)
+            // Encode the Solana Pay transaction request URL
+            const solanaPayUrl = encodeURL({
+              link: apiUrl,
+              label: "Claim cToken",
+              message: `Proof of Participation for ${name}`,
+            });
+
+            return solanaPayUrl.toString();
+          };
+          const qrUrl = generateQrCodeUrl();
+          const updateData = {
+            qr_url: qrUrl,
+          };
+          update({ id: data?.data?._id, data: updateData });
+        },
+        onError(err) {
+          console.error("create_res", err);
+        },
+      });
     } catch (err) {
-      console.error(err);
       toast.error("Failed to create mint or mint tokens.");
     } finally {
       setIsSubmitting(false);
@@ -220,12 +229,10 @@ const CreateEventPage = () => {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Create New Event</h1>
       </div>
-
       <div className="solana-card p-6 max-w-2xl mx-auto">
         <div className="w-16 h-16 mb-6 bg-(--solana-purple)/10 rounded-full flex items-center justify-center">
           <Badge size={28} className="text-(--solana-purple)" />
         </div>
-
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="name">Event Name*</Label>
@@ -237,7 +244,6 @@ const CreateEventPage = () => {
               required
             />
           </div>
-
           <div className="space-y-2">
             <Label htmlFor="description">Event Description</Label>
             <Textarea
@@ -250,7 +256,6 @@ const CreateEventPage = () => {
               className="min-h-[120px]"
             />
           </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="date">Event Date*</Label>
@@ -265,7 +270,6 @@ const CreateEventPage = () => {
                 <CalendarIcon className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
               </div>
             </div>
-
             <div className="space-y-2">
               <Label htmlFor="tokenCount">Number of Proof Tokens</Label>
               <div className="relative">
@@ -281,7 +285,6 @@ const CreateEventPage = () => {
               </div>
             </div>
           </div>
-
           <div className="pt-4">
             <Button
               className="solana-button w-full"

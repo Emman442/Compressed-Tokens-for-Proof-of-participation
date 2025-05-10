@@ -3,10 +3,9 @@ import React, { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge, Download, Share } from "lucide-react";
 import { toast } from "sonner";
-import { encodeURL, createQR } from "@solana/pay";
+import { createQR } from "@solana/pay";
 import { useGetEventById } from "@/features/event";
-
-// Define TypeScript interface for event
+import { useParams } from "next/navigation";
 interface Event {
   _id: string;
   name: string;
@@ -19,39 +18,35 @@ interface Event {
 
 const Page = () => {
   const [event, setEvent] = useState<Event | null>(null);
+  const params=useParams()
   const [url, setUrl] = useState<string>("");
    const options: Intl.DateTimeFormatOptions = {
      year: "numeric",
      month: "long",
      day: "numeric",
    };
-  const id = window.location.pathname.split("/")[3]; // Extract ID from URL
-  const {data, isFetching} = useGetEventById(id)
- 
+  const {data, isFetching} = useGetEventById(params.id as string)
+
   useEffect(() => {
     if (data?.data) {
       setEvent(data.data);
       setUrl(data?.data.qr_url)
     }
   }, [data]);
-
-
+  
   const qrRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
 
     if (qrRef.current) {
-      qrRef.current.innerHTML = ""; // Clear previous QR code
+      qrRef.current.innerHTML = ""; 
       const qr = createQR(url, 160, "white", "black");
       qr.append(qrRef.current);
     }
   }, [event?._id, event?.name]);
 
   const handleCopyLink = () => {
-    // Option 1: Copy the Solana Pay URL directly
-    // const claimUrl = url;
 
-    // Option 2: Copy a frontend claim page URL (recommended for sharing)
     const claimUrl = `https://solana-proof-pass.com/claim?event=${event?._id}`;
 
     navigator.clipboard.writeText(claimUrl).then(() => {
@@ -93,7 +88,6 @@ const Page = () => {
     };
     img.src = url;
   };
-
   return (
     <div className="container py-6 mx-auto w-[90%]">
       <div className="flex items-center justify-between mb-6">

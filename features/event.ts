@@ -1,4 +1,4 @@
-import { createEvent, getEventByAddress, getEventById } from "@/services/event";
+import { createEvent, getEventByAddress, getEventById, updateEvent } from "@/services/event";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -17,15 +17,11 @@ export function useGetEvent(address: string) {
 
     const queryClient = useQueryClient();
     const { data, isFetching } = useQuery({
-        queryKey: ["my-events", address], // ✅ now includes ID
-        queryFn: () => getEventByAddress(address), // ✅ direct access to ID
-        enabled: !!address, // ✅ optional: prevent running if ID is undefined/null
+        queryKey: ["my-events", address], 
+        queryFn: () => getEventByAddress(address),
+        enabled: !!address,
     });
-
-
-
     return { data, isFetching };
-
 }
 
 
@@ -36,8 +32,17 @@ export function useGetEventById(id: string) {
         queryFn: () => getEventById(id),
         enabled: !!id,
     });
-
-
-
     return { data, isFetching };
+}
+
+
+export function useUpdateEvent() {
+    const queryClient = useQueryClient();
+    const { mutate: update, isPending } = useMutation({
+        mutationFn: ({ id, data }: {id: string, data: any}) => updateEvent(id, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['events'] });
+        }
+    });
+    return { update, isPending };
 }
