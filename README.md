@@ -1,36 +1,49 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🎟️ VaultDrop — Scalable Event Participation via Compressed Tokens & QR
 
-## Getting Started
+VaultDrop is a Solana-based app that allows creators to mint compressed tokens (cTokens) for events and distribute them seamlessly to attendees via QR codes. Designed for scalability and simplicity, it uses Light Protocol, Solana Pay, and ZK Compression to drastically reduce on-chain state costs while preserving performance and security.
 
-First, run the development server:
+## 🚀 Features
+
+-  Creators mint compressed tokens for their events
+-  A vault is created per event to securely hold the tokens
+-  A Solana Pay QR Code is generated for attendees to scan
+-  Each scan transfers 1 cToken from the event vault to the user's wallet
+-  Built with privacy, scalability, and composability in mind
+- Prevents a user from claiming a token more than once
+
+## 🛠️ Tech Stack
+
+-  **Light Protocol** — for ZK compression and compressed tokens
+-  **Solana Pay** — QR-based wallet interaction
+-  **Next.js + TypeScript** — frontend framework
+-  **Node.js** — backend logic
+-  **MongoDB** — event + user metadata storage
+
+## 📸 Screenshots
+
+You can replace these placeholders with actual screenshots.
+
+### Event Creation & Token Minting UI
+![Event Creation](screenshots/event-creation.png)
+
+### Vault Overview & QR Code Generation
+![Vault & QR Code](screenshots/vault-qrcode.png)
+
+### Mobile Wallet Scan & Token Receipt Flow
+![User Scan](screenshots/user-scan.png)
+
+## ⚙️ How It Works
+
+1. Creators initiate an event → compressed tokens are minted.
+2. A vault is created and tokens are transferred into it.
+3. A Solana Pay QR code is generated for users.
+4. Users scan the QR → token is transferred from vault to their wallet.
+5. The system updates records to prevent double claims.
+
+## 📦 Installation
 
 ```bash
+git clone https://github.com/yourusername/vaultdrop.git
+cd vaultdrop
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
