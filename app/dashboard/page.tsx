@@ -19,7 +19,6 @@ export interface Event {
   qr_url: string;
 }
 
-
 const OrganizerDashboard = () => {
   const { publicKey } = useWallet();
   if (!publicKey) {
@@ -30,7 +29,9 @@ const OrganizerDashboard = () => {
           description="Please connect your wallet to view your events."
           icon={<FileText size={24} className="text-muted-foreground" />}
         />
-        <WalletMultiButton style={{ height: "40px", borderRadius: "6px" }} />
+        <div className="custom-wallet-ui">
+          <WalletMultiButton style={{ height: "40px", borderRadius: "6px" }} />
+        </div>
       </div>
     );  
   }
@@ -38,10 +39,8 @@ const OrganizerDashboard = () => {
   const router = useRouter();
   const [events, setEvents] = useState<Event[] | null>(null);
 
-  // Update events when data changes
   useEffect(() => {
     if (data) {
-      console.log("data", data)
       setEvents(data.data);
     }
   }, [data]);
@@ -62,7 +61,6 @@ const OrganizerDashboard = () => {
       </div>
     );
   }
-
   return (
     <div className="container py-6 mx-auto w-[90%]">
       <div className="flex items-center justify-between mb-6">

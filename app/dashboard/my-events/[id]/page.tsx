@@ -93,7 +93,7 @@ const Page = () => {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Event QR Code</h1>
         <Button
-          className="solana-button-secondary"
+          className="solana-button-secondary text-[13px]"
           variant="outline"
           onClick={() => window.history.back()}
         >
@@ -101,10 +101,10 @@ const Page = () => {
         </Button>
       </div>
 
-      <div className="solana-card p-6 max-w-2xl mx-auto">
+      <div className="solana-card p-4 max-w-2xl mx-auto">
         <div className="text-center mb-6">
-          <div className="w-16 h-16 mx-auto mb-4 bg-solana-purple/10 rounded-full flex items-center justify-center">
-            <Badge size={28} className="text-solana-purple" />
+          <div className="w-16 h-16 mx-auto mb-4 bg-(--solana-purple)/10 rounded-full flex items-center justify-center">
+            <Badge size={28} className="text-(--solana-purple)" />
           </div>
           <h2 className="text-xl font-bold">{event?.name}</h2>
           <p className="text-[#94A3B8] text-[12px]">
@@ -116,8 +116,8 @@ const Page = () => {
 
         <div className="border-t border-border my-6"></div>
 
-        <div className="text-center mb-6">
-          <p className="text-sm text-muted-foreground max-w-md mx-auto">
+        <div className="text-center mb-4">
+          <p className="text-sm text-[#7A879C] text-[13px] max-w-md mx-auto">
             Share this QR code with attendees so they can scan and claim their
             proof of attendance.
           </p>
@@ -125,13 +125,13 @@ const Page = () => {
 
         <div
           id="qr-code"
-          className="flex items-center justify-center mb-6"
+          className="flex items-center justify-center mb-4"
           ref={qrRef}
         />
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Button
-            className="solana-button-secondary flex items-center gap-2"
+            className="solana-button-secondary flex items-center gap-2 text-[13px]"
             onClick={handleCopyLink}
           >
             <Share size={16} />
@@ -139,7 +139,7 @@ const Page = () => {
           </Button>
 
           <Button
-            className="solana-button flex items-center gap-2"
+            className="solana-button flex items-center gap-2 text-[13px]"
             onClick={handleDownloadQR}
           >
             <Download size={16} />
@@ -147,10 +147,12 @@ const Page = () => {
           </Button>
         </div>
 
-        <div className="mt-8 pt-6 border-t border-border">
+        <div className="mt-8 pt-4 border-t border-border">
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-            <div className="text-sm text-muted-foreground">
-              <span className="block sm:inline">Tokens claimed: </span>
+            <div className="text-sm text-[#7A879C] text-[13px]">
+              <span className="block sm:inline text-[#7A879C] text-[13px]">
+                Tokens claimed:{" "}
+              </span>
               <span className="font-medium">
                 {event
                   ? `${event.claimed_tokens} of ${event.minted_tokens}`

@@ -21,7 +21,7 @@ const Header = () => {
         <div className="mr-4 flex items-center space-x-2">
           <div className="w-6 h-6 rounded-full bg-gradient-to-r from-(--solana-purple) to-(--solana-purple-dark)"></div>
           <span className="hidden font-bold sm:inline-block">
-            Solana Proof Pass
+            cPOP
           </span>
         </div>
         <nav className="flex items-center space-x-4 lg:space-x-6 mx-6 overflow-x-auto">
@@ -47,30 +47,8 @@ const Header = () => {
           >
             Create Event
           </Link>
-          <Link
-            href="/claim"
-            className={cn(
-              "text-sm font-medium transition-colors hover:text-solana-purple whitespace-nowrap",
-              isActive("/claim")
-                ? "text-solana-purple"
-                : "text-muted-foreground"
-            )}
-          >
-            Claim
-          </Link>
-          <Link
-            href="/proofs"
-            className={cn(
-              "text-sm font-medium transition-colors hover:text-solana-purple whitespace-nowrap",
-              isActive("/proofs")
-                ? "text-(--solana-purple)"
-                : "text-(--muted-foreground)"
-            )}
-          >
-            My Proofs
-          </Link>
         </nav>
-        <div className="ml-auto flex items-center space-x-4">
+        <div className="ml-auto flex items-center space-x-4 custom-wallet-ui">
           <WalletMultiButton style={{height: "40px", borderRadius: "6px"}}/>
         </div>
       </div>

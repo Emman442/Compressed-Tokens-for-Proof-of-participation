@@ -48,9 +48,9 @@ const EventCard = ({
       </div>
       <div className="p-4 flex-grow">
         <h3 className="font-bold text-lg mb-1 truncate">{name}</h3>
-        <div className="flex items-center text-sm text-(--muted-foreground) mb-3">
-          <Calendar size={14} className="mr-1" />
-          <span>{new Date(date).toLocaleDateString('en-US', options)}</span>
+        <div className="flex items-center text-sm  text-[#7A879C] mb-2 text-[13px]">
+          <Calendar size={14} className="mr-1 text-[#7A879C]" />
+          <span>{new Date(date).toLocaleDateString("en-US", options)}</span>
         </div>
 
         {!isProof &&
@@ -58,19 +58,23 @@ const EventCard = ({
           claimed_tokens !== undefined && (
             <div className="mt-2 space-y-1">
               <div className="flex justify-between text-sm">
-                <span className="text-(--muted-foreground)">Minted:</span>
-                <span className="font-medium">{minted_tokens}</span>
+                <span className="text-[12px] text-[#7A879C]">Minted:</span>
+                <span className="font-medium text-[12px]">{minted_tokens}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-(--muted-foreground)">Claimed:</span>
-                <span className="font-medium">{claimed_tokens}</span>
+                <span className="text-[12px]  text-[#7A879C]">Claimed:</span>
+                <span className="font-medium text-[12px]">
+                  {claimed_tokens}
+                </span>
               </div>
               <div className="h-2 bg-[#1B294B] mt-2 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-gradient-to-r from-(--solana-purple) to-(--solana-purple-dark)"
                   style={{
                     width: `${
-                      minted_tokens > 0 ? (claimed_tokens / minted_tokens) * 100 : 0
+                      minted_tokens > 0
+                        ? (claimed_tokens / minted_tokens) * 100
+                        : 0
                     }%`,
                   }}
                 />
@@ -91,7 +95,7 @@ const EventCard = ({
 
       {!isProof && (
         <div className="p-4 pt-0 mt-auto">
-          <button className="solana-button w-full">View QR Code</button>
+          <button className="solana-button w-full text-[13px]">View QR Code</button>
         </div>
       )}
     </div>
