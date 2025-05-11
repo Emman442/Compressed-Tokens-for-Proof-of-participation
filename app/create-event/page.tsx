@@ -64,8 +64,6 @@ const CreateEventPage = () => {
       const mintKeypair = Keypair.generate();
       const rentExemptBalance =
         await connection.getMinimumBalanceForRentExemption(MINT_SIZE);
-
-      // 1️⃣ Create mint instructions
       const createMintIxs = await CompressedTokenProgram.createMint({
         feePayer: publicKey,
         mint: mintKeypair.publicKey,
@@ -93,7 +91,7 @@ const CreateEventPage = () => {
       await connection.confirmTransaction(txId, "confirmed");
       toast.success(`Mint created: ${mintKeypair.publicKey.toBase58()}`);
 
-      // 2️⃣ Initialize RPC for LightProtocol
+
       const outputStateTreeInfo = selectStateTreeInfo(
         await connection.getStateTreeInfos()
       );
@@ -101,7 +99,6 @@ const CreateEventPage = () => {
         await getTokenPoolInfos(connection, mintKeypair.publicKey)
       );
 
-      // 3️⃣ Build mintTo instruction
       const mintToIx = await CompressedTokenProgram.mintTo({
         feePayer: publicKey,
         mint: mintKeypair.publicKey,
@@ -112,7 +109,7 @@ const CreateEventPage = () => {
         tokenPoolInfo,
       });
 
-      // 4️⃣ Build new tx for mintTo
+
       const { blockhash: newBlockhash } = await connection.getLatestBlockhash();
       const mintToTx = new Transaction({
         feePayer: publicKey,
@@ -131,8 +128,7 @@ const CreateEventPage = () => {
       await connection.confirmTransaction(mintToTxId, "confirmed");
 
       toast.success(`Minted ${tokenCount} tokens!`);
-
-      //Transfer to event vault
+      //Next, Performingg transfer to event vault
 
       let amount = bn(tokenCount * 1e9);
       const compressedTokenAccounts =
@@ -195,7 +191,8 @@ const CreateEventPage = () => {
         onSuccess(data) {
           const generateQrCodeUrl = () => {
             const apiUrl = new URL(
-              `${baseUrl}/api/claim-token/${data?.data?._id}`
+              // `${baseUrl}/api/claim-token/${data?.data?._id}`
+              `https://ce2d-129-222-206-182.ngrok-free.app/api/claim-token/${data?.data?._id}`
             );
 
             // Encode the Solana Pay transaction request URL

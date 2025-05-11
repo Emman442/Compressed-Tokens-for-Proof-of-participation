@@ -54,7 +54,6 @@ const OrganizerDashboard = () => {
     router.push("/create-event");
   };
 
-  // Loading state
   if (isFetching) {
     return (
       <div className="container py-6 mx-auto w-[90%] flex flex-col items-center justify-center min-h-[60vh]">
@@ -91,7 +90,7 @@ const OrganizerDashboard = () => {
       ) : (
         <EmptyState
           title="No Events Created"
-          description="Connect your wallet and create your first event to start generating attendance proofs for your participants."
+          description="create your first event to start generating attendance proofs for your participants."
           icon={<FileText size={24} className="text-muted-foreground" />}
           action={
             <Button className="solana-button" onClick={navigateToCreateEvent}>

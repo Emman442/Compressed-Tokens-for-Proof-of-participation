@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
-    Connection,
     PublicKey,
     Transaction,
     Keypair,
@@ -8,21 +7,23 @@ import {
 } from '@solana/web3.js';
 import axios from 'axios';
 import {
-    getOrCreateAssociatedTokenAccount,
-    createTransferCheckedInstruction,
-} from '@solana/spl-token';
-import { CompressedTokenProgram, getTokenPoolInfos, selectMinCompressedTokenAccountsForTransfer, selectTokenPoolInfosForDecompression, transfer } from "@lightprotocol/compressed-token";
-import { bn, buildAndSignTx, createRpc, dedupeSigner, Rpc, sendAndConfirmTx } from '@lightprotocol/stateless.js';
-import { sendError } from 'next/dist/server/api-utils';
+    CompressedTokenProgram,
+    selectMinCompressedTokenAccountsForTransfer,
+} from "@lightprotocol/compressed-token";
+import {
+    createRpc,
+    Rpc
+} from '@lightprotocol/stateless.js';
 
-const TOKEN_DECIMALS = 9; // Adjust based on your token (e.g., USDC is 6)
+const TOKEN_DECIMALS = 9;
 
 export async function POST(request: NextRequest, { params }: any) {
-    const { eventId } = await params;
-    const eventRes = await axios.get(`${process.env.BACKEND_BASE_URL}/event/details/${params.eventId}`);
-    const eventData = eventRes.data;
+    const { eventId } = params;
 
     try {
+        const eventRes = await axios.get(`${process.env.BACKEND_BASE_URL}/event/details/${eventId}`);
+        const eventData = eventRes.data;
+
         const body = await request.json();
         const { account } = body;
 
@@ -31,34 +32,65 @@ export async function POST(request: NextRequest, { params }: any) {
         }
 
         const RPC_ENDPOINT = `${process.env.NEXT_PUBLIC_HELIUS_DEVNET_URL}`;
-        const COMPRESSION_ENDPOINT = RPC_ENDPOINT;
-        const PROVER_ENDPOINT = RPC_ENDPOINT;
-
-        const connection: Rpc = createRpc(
-            RPC_ENDPOINT,
-            COMPRESSION_ENDPOINT,
-            PROVER_ENDPOINT
-        );
+        const connection: Rpc = createRpc(RPC_ENDPOINT, RPC_ENDPOINT, RPC_ENDPOINT);
         const userPublicKey = new PublicKey(account);
+
         const secretKeyUint8 = Uint8Array.from(Buffer.from(eventData.eventKeypair.secretKey, 'base64'));
         const payer = Keypair.fromSecretKey(secretKeyUint8);
 
-        const transferTxId = await transfer(
-            connection,
-            payer,
-            new PublicKey(eventData.mint),
-            1e8,
-            payer,
-            userPublicKey
+        const { blockhash } = await connection.getLatestBlockhash();
+
+        const mint = new PublicKey(eventData.mint);
+
+        const parsedAccounts = await connection.getCompressedTokenAccountsByOwner(userPublicKey, { mint });
+
+        if (!parsedAccounts.items.length) {
+            return NextResponse.json({ error: 'No compressed token accounts found for this mint.' }, { status: 404 });
+        }
+
+        const [inputAccounts] = selectMinCompressedTokenAccountsForTransfer(parsedAccounts.items, 1e5);
+        const amount = 1e8;
+
+        const { compressedProof, rootIndices } = await connection.getValidityProofV0(
+            inputAccounts.map(account => ({
+                hash: account.compressedAccount.hash,
+                tree: account.compressedAccount.treeInfo.tree,
+                queue: account.compressedAccount.treeInfo.queue
+            }))
         );
 
-        console.log('Transfer transaction ID:', transferTxId);
 
+        const transaction = new Transaction();
+        transaction.add(
+            ComputeBudgetProgram.setComputeUnitLimit({ units: 500_000 })
+        );
+        const transferIx = await CompressedTokenProgram.transfer({
+            payer: payer.publicKey,
+            inputCompressedTokenAccounts: inputAccounts,
+            toAddress: userPublicKey,
+            amount,
+            recentInputStateRootIndices: rootIndices,
+            recentValidityProof: compressedProof,
+        });
+
+        transaction.add(transferIx);
+
+        transaction.feePayer = payer.publicKey;
+
+        transaction.recentBlockhash = blockhash;
+
+        transaction.partialSign(payer);
+
+        const serializedTx = transaction.serialize({
+            requireAllSignatures: false,
+            verifySignatures: false
+        }).toString('base64');
 
         return NextResponse.json({
-            transaction: transferTxId,
-            message: 'cToken transferred and decompressed successfully!',
+            transaction: serializedTx,
+            message: 'Claim your cToken!',
         });
+
     } catch (error) {
         console.error('Error creating transaction:', error);
         return NextResponse.json({ error: 'Failed to create transaction' }, { status: 500 });
@@ -66,15 +98,8 @@ export async function POST(request: NextRequest, { params }: any) {
 }
 
 export async function GET(request: NextRequest) {
-
-    try {
-        return NextResponse.json({
-            transaction: "Success",
-            message: 'Claim your cToken!',
-        });
-    } catch (error) {
-        console.error('Error creating transaction:', error);
-        return NextResponse.json({ error: 'Failed to create transaction' }, { status: 500 });
-    }
+    return NextResponse.json({
+        label: "Claim cToken",
+        icon: "https://i.pinimg.com/736x/2a/1d/da/2a1dda36641f15e1ce156a70a5b54b92.jpg",
+    });
 }
-
