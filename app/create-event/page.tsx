@@ -197,7 +197,7 @@ const handleSubmit = async (e: React.FormEvent) => {
         const generateQrCodeUrl = () => {
           const apiUrl = new URL(
             // `${baseUrl}/api/claim-token/${data?.data?._id}`
-            `https://7352-98-97-79-238.ngrok-free.app/api/claim-token/${data?.data?._id}`
+            `https://compressed-tokens-for-proof-of.onrender.com/api/claim-token/${data?.data?._id}`
           );
 
           // Encode the Solana Pay transaction request URL
