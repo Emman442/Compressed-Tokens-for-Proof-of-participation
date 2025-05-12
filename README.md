@@ -2,7 +2,7 @@
 
 VaultDrop is a Solana-based app that allows creators to mint compressed tokens (cTokens) for events and distribute them seamlessly to attendees via QR codes. Designed for scalability and simplicity, it uses Light Protocol, Solana Pay, and ZK Compression to drastically reduce on-chain state costs while preserving performance and security.
 
-## 🚀 Features
+## Features
 
 -  Creators mint compressed tokens for their events
 -  A vault is created per event to securely hold the tokens
@@ -39,11 +39,3 @@ You can replace these placeholders with actual screenshots.
 3. A Solana Pay QR code is generated for users.
 4. Users scan the QR → token is transferred from vault to their wallet.
 5. The system updates records to prevent double claims.
-
-## 📦 Installation
-
-```bash
-git clone https://github.com/yourusername/vaultdrop.git
-cd vaultdrop
-npm install
-npm run dev

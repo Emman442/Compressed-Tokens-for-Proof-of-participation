@@ -24,8 +24,12 @@ export async function POST(request: NextRequest, { params }: any) {
         const eventRes = await axios.get(`${process.env.BACKEND_BASE_URL}/event/details/${eventId}`);
         const eventData = eventRes.data;
 
+        // console.log("event data: ", eventData)
+
         const body = await request.json();
         const { account } = body;
+
+
 
         if (!account) {
             return NextResponse.json({ error: 'No account provided' }, { status: 400 });
@@ -41,8 +45,10 @@ export async function POST(request: NextRequest, { params }: any) {
         const { blockhash } = await connection.getLatestBlockhash();
 
         const mint = new PublicKey(eventData.mint);
+        console.log(mint)
 
-        const parsedAccounts = await connection.getCompressedTokenAccountsByOwner(userPublicKey, { mint });
+        const parsedAccounts = await connection.getCompressedTokenAccountsByOwner(payer.publicKey, { mint });
+
 
         if (!parsedAccounts.items.length) {
             return NextResponse.json({ error: 'No compressed token accounts found for this mint.' }, { status: 404 });

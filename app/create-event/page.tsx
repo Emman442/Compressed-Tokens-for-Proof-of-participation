@@ -21,7 +21,13 @@ import {
   selectMinCompressedTokenAccountsForTransfer,
   selectTokenPoolInfo,
 } from "@lightprotocol/compressed-token";
-import { ComputeBudgetProgram, Keypair, Transaction } from "@solana/web3.js";
+import {
+  ComputeBudgetProgram,
+  Connection,
+  Keypair,
+  PublicKey,
+  Transaction,
+} from "@solana/web3.js";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useCreateGame, useUpdateEvent } from "@/features/event";
 
@@ -45,181 +51,181 @@ const CreateEventPage = () => {
     PROVER_ENDPOINT
   );
 
-    const [baseUrl, setBaseUrl] = useState("");
+  const [baseUrl, setBaseUrl] = useState("");
 
-    useEffect(() => {
-      setBaseUrl(window.location.origin);
-    }, []);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-
-    try {
-      if (!publicKey || !signTransaction) {
-        toast.error("Wallet not connected");
-        throw new Error("Wallet not connected");
-      }
-
-      const mintKeypair = Keypair.generate();
-      const rentExemptBalance =
-        await connection.getMinimumBalanceForRentExemption(MINT_SIZE);
-      const createMintIxs = await CompressedTokenProgram.createMint({
-        feePayer: publicKey,
-        mint: mintKeypair.publicKey,
-        decimals: 9,
-        authority: publicKey,
-        freezeAuthority: null,
-        rentExemptBalance,
-        tokenProgramId: TOKEN_PROGRAM_ID,
-      });
-
-      const { blockhash } = await connection.getLatestBlockhash();
-
-      const transaction = new Transaction({
-        feePayer: publicKey,
-        recentBlockhash: blockhash,
-      });
-
-      createMintIxs.forEach((ix) => transaction.add(ix));
-      transaction.partialSign(mintKeypair);
-
-      const signedTx = await signTransaction(transaction);
-      const txId = await connection.sendRawTransaction(signedTx.serialize(), {
-        skipPreflight: false,
-      });
-      await connection.confirmTransaction(txId, "confirmed");
-      toast.success(`Mint created: ${mintKeypair.publicKey.toBase58()}`);
+  useEffect(() => {
+    setBaseUrl(window.location.origin);
+  }, []);
 
 
-      const outputStateTreeInfo = selectStateTreeInfo(
-        await connection.getStateTreeInfos()
-      );
-      const tokenPoolInfo = selectTokenPoolInfo(
-        await getTokenPoolInfos(connection, mintKeypair.publicKey)
-      );
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setIsSubmitting(true);
 
-      const mintToIx = await CompressedTokenProgram.mintTo({
-        feePayer: publicKey,
-        mint: mintKeypair.publicKey,
-        authority: publicKey,
-        toPubkey: publicKey,
-        amount: tokenCount * 1e9,
-        outputStateTreeInfo,
-        tokenPoolInfo,
-      });
-
-
-      const { blockhash: newBlockhash } = await connection.getLatestBlockhash();
-      const mintToTx = new Transaction({
-        feePayer: publicKey,
-        recentBlockhash: newBlockhash,
-      });
-      mintToTx.add(
-        ComputeBudgetProgram.setComputeUnitLimit({ units: 1_000_000 }),
-        mintToIx
-      );
-
-      const signedMintToTx = await signTransaction(mintToTx);
-      const mintToTxId = await connection.sendRawTransaction(
-        signedMintToTx.serialize(),
-        { skipPreflight: false }
-      );
-      await connection.confirmTransaction(mintToTxId, "confirmed");
-
-      toast.success(`Minted ${tokenCount} tokens!`);
-      //Next, Performingg transfer to event vault
-
-      let amount = bn(tokenCount * 1e9);
-      const compressedTokenAccounts =
-        await connection.getCompressedTokenAccountsByOwner(publicKey, {
-          mint: mintKeypair.publicKey,
-        });
-
-      const [inputAccounts] = selectMinCompressedTokenAccountsForTransfer(
-        compressedTokenAccounts.items,
-        amount
-      );
-
-      const proof = await connection.getValidityProofV0(
-        inputAccounts.map((account) => ({
-          hash: account.compressedAccount.hash,
-          tree: account.compressedAccount.treeInfo.tree,
-          queue: account.compressedAccount.treeInfo.queue,
-        }))
-      );
-
-      const ix = await CompressedTokenProgram.transfer({
-        payer: publicKey,
-        inputCompressedTokenAccounts: inputAccounts,
-        toAddress: eventVault.publicKey,
-        amount,
-        recentInputStateRootIndices: proof.rootIndices,
-        recentValidityProof: proof.compressedProof,
-      });
-      const transferTx = new Transaction({
-        feePayer: publicKey,
-        recentBlockhash: blockhash,
-      });
-
-      transferTx.add(
-        ComputeBudgetProgram.setComputeUnitLimit({ units: 500_000 }),
-        ix
-      );
-      const signedTransferTx = await signTransaction(transferTx);
-      const transferTxId = await connection.sendRawTransaction(
-        signedTransferTx.serialize(),
-        { skipPreflight: false }
-      );
-      await connection.confirmTransaction(transferTxId, "confirmed");
-
-      toast.success("Transferred tokens to event vault!");
-
-      const data = {
-        name,
-        description,
-        date,
-        minted_tokens: tokenCount,
-        createdBy: publicKey.toBase58(),
-        mint: mintKeypair.publicKey.toBase58(),
-        keypair: {
-          publicKey: eventVault.publicKey.toBase58(),
-          secretKey: Buffer.from(eventVault.secretKey).toString("base64"),
-        },
-      };
-      create(data, {
-        onSuccess(data) {
-          const generateQrCodeUrl = () => {
-            const apiUrl = new URL(
-              // `${baseUrl}/api/claim-token/${data?.data?._id}`
-              `https://ce2d-129-222-206-182.ngrok-free.app/api/claim-token/${data?.data?._id}`
-            );
-
-            // Encode the Solana Pay transaction request URL
-            const solanaPayUrl = encodeURL({
-              link: apiUrl,
-              label: "Claim cToken",
-              message: `Proof of Participation for ${name}`,
-            });
-
-            return solanaPayUrl.toString();
-          };
-          const qrUrl = generateQrCodeUrl();
-          const updateData = {
-            qr_url: qrUrl,
-          };
-          update({ id: data?.data?._id, data: updateData });
-        },
-        onError(err) {
-          console.error("create_res", err);
-        },
-      });
-    } catch (err) {
-      toast.error("Failed to create mint or mint tokens.");
-    } finally {
-      setIsSubmitting(false);
+  try {
+    if (!publicKey || !signTransaction) {
+      toast.error("Wallet not connected");
+      throw new Error("Wallet not connected");
     }
-  };
+
+    const mintKeypair = Keypair.generate();
+    const rentExemptBalance =
+      await connection.getMinimumBalanceForRentExemption(MINT_SIZE);
+    const createMintIxs = await CompressedTokenProgram.createMint({
+      feePayer: publicKey,
+      mint: mintKeypair.publicKey,
+      decimals: 9,
+      authority: publicKey,
+      freezeAuthority: null,
+      rentExemptBalance,
+      tokenProgramId: TOKEN_PROGRAM_ID,
+    });
+
+    const { blockhash } = await connection.getLatestBlockhash();
+
+    const transaction = new Transaction({
+      feePayer: publicKey,
+      recentBlockhash: blockhash,
+    });
+
+    createMintIxs.forEach((ix) => transaction.add(ix));
+    transaction.partialSign(mintKeypair);
+
+    const signedTx = await signTransaction(transaction);
+    const txId = await connection.sendRawTransaction(signedTx.serialize(), {
+      skipPreflight: false,
+    });
+    await connection.confirmTransaction(txId, "confirmed");
+    toast.success(`Mint created: ${mintKeypair.publicKey.toBase58()}`);
+
+    const outputStateTreeInfo = selectStateTreeInfo(
+      await connection.getStateTreeInfos()
+    );
+    const tokenPoolInfo = selectTokenPoolInfo(
+      await getTokenPoolInfos(connection, mintKeypair.publicKey)
+    );
+
+    const mintToIx = await CompressedTokenProgram.mintTo({
+      feePayer: publicKey,
+      mint: mintKeypair.publicKey,
+      authority: publicKey,
+      toPubkey: publicKey,
+      amount: tokenCount * 1e9,
+      outputStateTreeInfo,
+      tokenPoolInfo,
+    });
+
+    const { blockhash: newBlockhash } = await connection.getLatestBlockhash();
+    const mintToTx = new Transaction({
+      feePayer: publicKey,
+      recentBlockhash: newBlockhash,
+    });
+    mintToTx.add(
+      ComputeBudgetProgram.setComputeUnitLimit({ units: 1_000_000 }),
+      mintToIx
+    );
+
+    const signedMintToTx = await signTransaction(mintToTx);
+    const mintToTxId = await connection.sendRawTransaction(
+      signedMintToTx.serialize(),
+      { skipPreflight: false }
+    );
+    await connection.confirmTransaction(mintToTxId, "confirmed");
+
+    toast.success(`Minted ${tokenCount} tokens!`);
+    //Next, Performingg transfer to event vault
+
+    let amount = bn(tokenCount * 1e9);
+    const compressedTokenAccounts =
+      await connection.getCompressedTokenAccountsByOwner(publicKey, {
+        mint: mintKeypair.publicKey,
+      });
+
+    const [inputAccounts] = selectMinCompressedTokenAccountsForTransfer(
+      compressedTokenAccounts.items,
+      amount
+    );
+
+    const proof = await connection.getValidityProofV0(
+      inputAccounts.map((account) => ({
+        hash: account.compressedAccount.hash,
+        tree: account.compressedAccount.treeInfo.tree,
+        queue: account.compressedAccount.treeInfo.queue,
+      }))
+    );
+
+    const ix = await CompressedTokenProgram.transfer({
+      payer: publicKey,
+      inputCompressedTokenAccounts: inputAccounts,
+      toAddress: eventVault.publicKey,
+      amount,
+      recentInputStateRootIndices: proof.rootIndices,
+      recentValidityProof: proof.compressedProof,
+    });
+    const transferTx = new Transaction({
+      feePayer: publicKey,
+      recentBlockhash: blockhash,
+    });
+
+    transferTx.add(
+      ComputeBudgetProgram.setComputeUnitLimit({ units: 500_000 }),
+      ix
+    );
+    const signedTransferTx = await signTransaction(transferTx);
+    const transferTxId = await connection.sendRawTransaction(
+      signedTransferTx.serialize(),
+      { skipPreflight: false }
+    );
+    await connection.confirmTransaction(transferTxId, "confirmed");
+
+    toast.success("Transferred tokens to event vault!");
+
+    const data = {
+      name,
+      description,
+      date,
+      minted_tokens: tokenCount,
+      createdBy: publicKey.toBase58(),
+      mint: mintKeypair.publicKey.toBase58(),
+      keypair: {
+        publicKey: eventVault.publicKey.toBase58(),
+        secretKey: Buffer.from(eventVault.secretKey).toString("base64"),
+      },
+    };
+    create(data, {
+      onSuccess(data) {
+        const generateQrCodeUrl = () => {
+          const apiUrl = new URL(
+            // `${baseUrl}/api/claim-token/${data?.data?._id}`
+            `https://7352-98-97-79-238.ngrok-free.app/api/claim-token/${data?.data?._id}`
+          );
+
+          // Encode the Solana Pay transaction request URL
+          const solanaPayUrl = encodeURL({
+            link: apiUrl,
+            label: "Claim cToken",
+            message: `Proof of Participation for ${name}`,
+          });
+
+          return solanaPayUrl.toString();
+        };
+        const qrUrl = generateQrCodeUrl();
+        const updateData = {
+          qr_url: qrUrl,
+        };
+        update({ id: data?.data?._id, data: updateData });
+      },
+      onError(err) {
+        console.error("create_res", err);
+      },
+    });
+  } catch (err) {
+    toast.error("Failed to create mint or mint tokens.");
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
 
   return (
     <div className="container py-6 mx-auto w-[90%]">
