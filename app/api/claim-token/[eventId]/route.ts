@@ -21,10 +21,10 @@ export async function POST(request: NextRequest, { params }: any) {
     const { eventId } = params;
 
     try {
-        const eventRes = await axios.get(`${process.env.BACKEND_BASE_URL}/event/details/${eventId}`);
+        const eventRes = await axios.get(`${process.env.BACKEND_BASE_URL}/event/details/${params.eventId}`);
         const eventData = eventRes.data;
 
-        // console.log("event data: ", eventData)
+        console.log("event data: ", eventData)
 
         const body = await request.json();
         const { account } = body;
